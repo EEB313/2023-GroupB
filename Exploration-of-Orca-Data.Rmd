@@ -1,0 +1,117 @@
+---
+title: "Exploration of Orca Data"
+output: html_notebook
+---
+
+```{r}
+library (here)
+library(tidyverse)
+library(dplyr)
+```
+```{r}
+#Reading in the Data
+here()
+orca_data<- read.csv(here("Project", "stredulinsky2021.csv"))
+```
+```{r}
+# Exploring
+head(orca_data)
+glimpse(orca_data)
+#okay 25 columns that is a lot.
+
+
+```
+Okay just looking at this there is a lot of data we don't need. I'm gonna make a subset of the data with the columns we are looking for. (I'm not sure if it would be better to keep them all and do a mixed effects yet.)
+
+Pod: Whole group
+Subunit: within pod (different females with kids therfore the subunit is the largest familial group)
+
+- Year
+- Group ID
+- Submatriarch ID
+- HWI (Half weight index value estimating the pod’s cohesion in the given year)
+- CK.oa (Chinook salmon ocean abundance index)
+- CK.tr (Chinook salmon terminal run reconstruction abundance index) (accounting for industrial fishers affecting abundance)
+- CM (chum salmon terminal run abundance index)
+- DPERg (Total estimated daily prey energetic requirement of the pod)
+- DPERs (Total estimated daily prey energetic requirement of the subunit)
+- Lm (Indicates whether a maternal ancestor common to all pod members is alive (1) or dead (0) in given year
+- Ng (number of individuals in pod)
+- Ns (number of individuals in subunit)
+- Rg (Average pairwise maternal relatedness in the pod, corrected for pod size
+- Rsm Average pairwise maternal relatedness between the submatriarch and her
+descendants (the subunit), relative to that between her and the rest of her pod
+- Sg (Number of complete units in the pod)
+
+This will give me 14 columns instead of 25
+
+```{r}
+#Creating Subset
+orca_data_subset<- select(orca_data, Year, Group.ID, Submatriarch.ID,HWI, CK.oa, CK.tr, CM, DPERg, DPERs, Lm, Ng, Ns, Rg, Rsm, Sg)
+
+head(orca_data_subset)
+```
+```{r}
+#Checking for Na's
+which(is.na(orca_data_subset))
+#okay so it appears we don't have any missing values. 
+```
+
+
+```{r}
+#Year on cohesion
+ggplot(data = orca_data_subset, aes(x = Year, y = HWI))+
+  geom_point()+
+  facet_wrap(~Group.ID)
+# Chinook abundance on cohesion
+ggplot(data = orca_data_subset, aes(x = CK.tr, y = HWI))+
+  geom_point()+
+  facet_wrap(~Group.ID)
+# Maternity (by pod) on cohesion
+ggplot(data = orca_data_subset, aes (x = Rg, y = HWI))+
+  geom_point()+
+  facet_wrap(~Group.ID)
+
+
+```
+
+
+ANALYSIS PLAN
+
+I want to view the data so I'm going to make a linear mixed model.
+- Random Variables:
+  - Year
+  - CK.oa
+  - CK.tr
+  - CM
+   - Note turn Group.ID and Submatriarch into as.factor
+
+- Fixed variables: 
+  - HWI
+  - DPERg
+  - DPERs
+
+Not Effects?
+Group.ID
+Submatriarch.ID
+
+```{r}
+
+```
+
+
+Things we need to decide
+- pod or subunit
+- chinook salmon vs chum or both?
+- Rsm vs Rg
+
+
+
+
+
+
+
+
+
+
+
