@@ -6,7 +6,7 @@ output: html_notebook
 # Set Up
 
 ```{r Packages}
-library (here)
+library(here)
 library(tidyverse)
 library(dplyr)
 ```
@@ -59,7 +59,7 @@ This will give me 14 columns instead of 25
 
 #### Subsetting the Data
 
-```{r Selecting Columns}
+```{r Selecting Columns 1}
 #Creating Subset
 orca_data_subset <- select(orca_data, Year, Group.ID, Submatriarch.ID,
                            HWI, CK.oa, CK.tr, CM, DPERg, DPERs, Lm, Ng, 
@@ -78,7 +78,7 @@ which(is.na(orca_data_subset))
 
 ```{r Selecting Columns 2}
 orca_data_sub2 <- orca_data %>%
-  select(Year, Group.ID, Ag, PMg, CK.oa, CK.tr, DPERg, FLg)
+  select(Year, Group.ID, Ag, CK.oa, CK.tr, CM, DPERg, FLg, FRg, Ng)
 
 #selecting 6 random groups to look at because 56 is hard to see at once
 groups <- sample(1:56, 6) #sample 6 random numbers from 1-56
@@ -91,7 +91,7 @@ for(i in 1:length(groups)){ #for each number
   groups[i] <- paste("G0", groups[i], sep="") #add G0 in front
   }
 }
-orca_data_sub2_5 <- orca_data_sub2 %>% #filter for the 6 groups
+orca_data_sub2_6 <- orca_data_sub2 %>% #filter for the 6 groups
   filter(Group.ID == groups[1] | Group.ID == groups[2] | Group.ID == groups[3] |
          Group.ID == groups[4] | Group.ID == groups[5] | Group.ID == groups[6])
 ```
@@ -122,14 +122,23 @@ ggplot(data = orca_data_subset, aes (x = Rg, y = HWI))+
 ```{r Exploratory Graphing 2}
 #Salmon over time
 ggplot(orca_data_sub2, aes(Year, CK.oa))+
-  geom_point()
+  geom_point()+
+  geom_line()
+
+ggplot(orca_data_sub2, aes(Year, CK.tr))+
+  geom_point()+
+  geom_line()
+
+ggplot(orca_data_sub2, aes(Year, CM))+
+  geom_point()+
+  geom_line()
 
 #Lactating females over time in groups
 ggplot(orca_data_sub2, aes(Year, FLg))+
   geom_point()+
   facet_wrap(~Group.ID)
 
-ggplot(orca_data_sub2_5, aes(Year, FLg))+
+ggplot(orca_data_sub2_6, aes(Year, FLg))+
   geom_point()+
   geom_line()+ #improves readability
   facet_wrap(~Group.ID)
@@ -139,9 +148,19 @@ ggplot(orca_data_sub2, aes(Year, Ag))+
   geom_point()+
   facet_wrap(~Group.ID)
 
-ggplot(orca_data_sub2_5, aes(Year, Ag))+
+ggplot(orca_data_sub2_6, aes(Year, Ag))+
   geom_point()+
   geom_line()+ #improves readability
+  facet_wrap(~Group.ID)
+
+#Number of individuals in groups
+ggplot(orca_data_sub2, aes(Year, Ng))+
+  geom_point()+
+  facet_wrap(~Group.ID)
+
+ggplot(orca_data_sub2_6, aes(Year, Ng))+
+  geom_point()+
+  geom_line()+
   facet_wrap(~Group.ID)
 ```
 
