@@ -13,8 +13,12 @@ library(dplyr)
 
 ```{r Data Loading}
 #Reading in the Data
+library(here)
 here()
-orca_data <- read.csv(here("Project", "Raw Data", "stredulinsky2021.csv"))
+#orca_data <- read.csv(here("Project", "Raw Data", "stredulinsky2021.csv")) 
+# Maddy's read in
+orca_data<- read.csv(here("stredulinsky2021.csv")) #Kaylie's'/Clara Read in 
+
 ```
 
 ```{r Data Exploration}
@@ -29,10 +33,10 @@ which(is.na(orca_data))
 
 # Data Selection
 
-Okay just looking at this there is a lot of data we don't need. I'm gonna make a subset of the data with the columns we are looking for. (I'm not sure if it would be better to keep them all and do a mixed effects yet.)
+Okay just looking at this there is a lot of data we don't need. I'm gonna make a subset of the data with the columns we are looking for. 
 
-Pod: Whole group
-Subunit: within pod (different females with kids therfore the subunit is the largest familial group)
+Pod: Whole group, we are just looking at pod
+
 
 ## Column selection
 
@@ -40,30 +44,23 @@ Subunit: within pod (different females with kids therfore the subunit is the lar
 
 - Year
 - Group ID
-- Submatriarch ID
-- HWI (Half weight index value estimating the pod’s cohesion in the given year)
 - CK.oa (Chinook salmon ocean abundance index)
 - CK.tr (Chinook salmon terminal run reconstruction abundance index) (accounting for industrial fishers affecting abundance)
 - CM (chum salmon terminal run abundance index)
 - DPERg (Total estimated daily prey energetic requirement of the pod)
-- DPERs (Total estimated daily prey energetic requirement of the subunit)
-- Lm (Indicates whether a maternal ancestor common to all pod members is alive (1) or dead (0) in given year
+- FLg (number of lactating females in the pod (proportion to pod size))
+- FRg (number of reproductive age females in pod)
 - Ng (number of individuals in pod)
-- Ns (number of individuals in subunit)
-- Rg (Average pairwise maternal relatedness in the pod, corrected for pod size
-- Rsm Average pairwise maternal relatedness between the submatriarch and her
-descendants (the subunit), relative to that between her and the rest of her pod
-- Sg (Number of complete units in the pod)
 
-This will give me 14 columns instead of 25
+This will give me 8 columns instead of 25
 
 #### Subsetting the Data
 
 ```{r Selecting Columns 1}
 #Creating Subset
-orca_data_subset <- select(orca_data, Year, Group.ID, Submatriarch.ID,
-                           HWI, CK.oa, CK.tr, CM, DPERg, DPERs, Lm, Ng, 
-                           Ns, Rg, Rsm, Sg)
+orca_data_subset <- select(orca_data, Year, Group.ID,
+                           CK.oa, CK.tr, CM, DPERg, FLg, FRg, Ng)
+                          
 
 head(orca_data_subset)
 ```
@@ -78,7 +75,7 @@ which(is.na(orca_data_subset))
 
 ```{r Selecting Columns 2}
 orca_data_sub2 <- orca_data %>%
-  select(Year, Group.ID, Ag, CK.oa, CK.tr, CM, DPERg, FLg, FRg, Ng)
+  select(Year, Group.ID, CK.oa, CK.tr, CM, DPERg, FLg, Ng)
 
 #selecting 6 random groups to look at because 56 is hard to see at once
 groups <- sample(1:56, 6, replace = F) #sample 6 random numbers from 1-56
@@ -106,26 +103,11 @@ orca_data_sub2 %>%
 #G005, G0019, G022, G024, G027, G037, G046 have 2 observations
 ```
 
+# We need to Remove groups with less then ?
+
+
 # Plotting
 
-## Initial Hypothesis
-
-```{r Exploratory Plotting}
-#Year on cohesion
-ggplot(data = orca_data_subset, aes(x = Year, y = HWI))+
-  geom_point()+
-  facet_wrap(~Group.ID)
-# Chinook abundance on cohesion
-ggplot(data = orca_data_subset, aes(x = CK.tr, y = HWI))+
-  geom_point()+
-  facet_wrap(~Group.ID)
-# Maternity (by pod) on cohesion
-ggplot(data = orca_data_subset, aes (x = Rg, y = HWI))+
-  geom_point()+
-  facet_wrap(~Group.ID)
-
-
-```
 
 ## Secondary Hypothesis
 
@@ -153,15 +135,6 @@ ggplot(orca_data_sub2_6, aes(Year, FLg))+
   geom_line()+ #improves readability
   facet_wrap(~Group.ID)
 
-#Median age in groups
-ggplot(orca_data_sub2, aes(Year, Ag))+
-  geom_point()+
-  facet_wrap(~Group.ID)
-
-ggplot(orca_data_sub2_6, aes(Year, Ag))+
-  geom_point()+
-  geom_line()+ #improves readability
-  facet_wrap(~Group.ID)
 
 #Number of individuals in groups
 ggplot(orca_data_sub2, aes(Year, Ng))+
@@ -184,37 +157,61 @@ ggplot(orca_data_sub2_6, aes(Year, DPERg))+
   facet_wrap(~Group.ID)
 ```
 
+## Testing Assumptions (LMM)
+1. Random Effects are Normally Distributed
+2. Response (lactating Females) is normally distributed
+3. Homogenity/Homoscedasticity of variance
 
-# Analysis
 
-ANALYSIS PLAN
-
-I want to view the data so I'm going to make a linear mixed model.
-- Random Variables:
-  - Year
-  - CK.oa
-  - CK.tr
-  - CM
-   - Note turn Group.ID and Submatriarch into as.factor
-
-- Fixed variables: 
-  - HWI
-  - DPERg
-  - DPERs
-
-Not Effects?
-Group.ID
-Submatriarch.ID
+Testing 1. Random Effects Normally distributed
+```{r}
+orca_data_sub2 %>% 
+  select(CK.oa, Year, Group.ID) %>% 
+  plot()
+```
 
 ```{r}
+orca_data_sub2 %>% 
+  select(CK.oa) %>% 
+  summary() 
 
+hist(orca_data_sub2$CK.oa)
+hist(orca_data_sub2$FLg) #Y is not normally distributed Transform to log?
 ```
 
 
-Things we need to decide
-- pod or subunit
-- chinook salmon vs chum or both?
-- Rsm vs Rg
+
+###Making our Linear Model
+Model #1 Treat Salmon Data as a fixed Variable. For the sake of just exploration I'm going to use just CK.oa for now
+
+Random Variables; Year, Group ID, 
+Fixed Variables : FLg, FRg, Salmon Data
+
+#LMM with Randomized Slope
+- we have random effects
+- data is dependen on one another
+- our data is not normal
+- we expect the number of salmon to increase 'randomly' with number of lactating females
+
+#CK.oa and FLg- simplest model just year as random effect
+```{r}
+library(lme4)
+library(lmerTest)
+CK_FLg_Year<-lmer(FLg~CK.oa+ (1|Year), data = orca_data_sub2, REML= FALSE)
+summary (CK_FLg)
+```
+__BIGNOTE___ (we dont actually know what salmon data units is so this means nothing rn :)
+
+
+#CK.Oa, FLG ; Random effects: year and Group ID
+```{r}
+CK_FLg_Year_GroupID<-lmer(FLg~CK.oa + (1|Year) + (1|Group.ID), data = orca_data_sub2, REML= FALSE)
+summary (CK_FLg)
+
+plot(CK_FLg_Year_GroupID) # I dont know
+```
+MISC>
+i think if salmon is a random variable it should be (1+ck.oa|Year) (because ck is dependent on y ear)
 
 
 
