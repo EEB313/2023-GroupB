@@ -1,0 +1,221 @@
+---
+title: "Exploration of Orca Data 2"
+output: html_notebook
+---
+
+# Set Up
+
+```{r Packages}
+library(here)
+library(tidyverse)
+library(dplyr)
+```
+
+```{r Data Loading}
+#Reading in the Data
+here()
+orca_data <- read.csv(here("Project", "Raw Data", "stredulinsky2021.csv"))
+```
+
+```{r Data Exploration}
+# Exploring
+head(orca_data)
+glimpse(orca_data)
+#okay 25 columns that is a lot.
+
+which(is.na(orca_data))
+#no NA's
+```
+
+# Data Selection
+
+Okay just looking at this there is a lot of data we don't need. I'm gonna make a subset of the data with the columns we are looking for. (I'm not sure if it would be better to keep them all and do a mixed effects yet.)
+
+Pod: Whole group
+Subunit: within pod (different females with kids therfore the subunit is the largest familial group)
+
+## Column selection
+
+### Initial Hypothesis (food and relatedness with pod cohesion)
+
+- Year
+- Group ID
+- Submatriarch ID
+- HWI (Half weight index value estimating the pod’s cohesion in the given year)
+- CK.oa (Chinook salmon ocean abundance index)
+- CK.tr (Chinook salmon terminal run reconstruction abundance index) (accounting for industrial fishers affecting abundance)
+- CM (chum salmon terminal run abundance index)
+- DPERg (Total estimated daily prey energetic requirement of the pod)
+- DPERs (Total estimated daily prey energetic requirement of the subunit)
+- Lm (Indicates whether a maternal ancestor common to all pod members is alive (1) or dead (0) in given year
+- Ng (number of individuals in pod)
+- Ns (number of individuals in subunit)
+- Rg (Average pairwise maternal relatedness in the pod, corrected for pod size
+- Rsm Average pairwise maternal relatedness between the submatriarch and her
+descendants (the subunit), relative to that between her and the rest of her pod
+- Sg (Number of complete units in the pod)
+
+This will give me 14 columns instead of 25
+
+#### Subsetting the Data
+
+```{r Selecting Columns 1}
+#Creating Subset
+orca_data_subset <- select(orca_data, Year, Group.ID, Submatriarch.ID,
+                           HWI, CK.oa, CK.tr, CM, DPERg, DPERs, Lm, Ng, 
+                           Ns, Rg, Rsm, Sg)
+
+head(orca_data_subset)
+```
+
+```{r NA Check}
+#Checking for Na's
+which(is.na(orca_data_subset))
+#okay so it appears we don't have any missing values. 
+```
+
+### Secondary Hypothesis - Food and Fecundity
+
+```{r Selecting Columns 2}
+orca_data_sub2 <- orca_data %>%
+  select(Year, Group.ID, Ag, CK.oa, CK.tr, CM, DPERg, FLg, FRg, Ng)
+
+#selecting 6 random groups to look at because 56 is hard to see at once
+groups <- sample(1:56, 6, replace = F) #sample 6 random numbers from 1-56
+groups <- as.character(groups)
+for(i in 1:length(groups)){ #for each number
+  if(nchar(groups[i])==1){ #if the number of characters is 1 (1, 2, 3...)
+    groups[i] <- paste("G00", groups[i], sep="") #add G00 in front
+  }
+  else{ #if the number is not 1 (10, 11, 12...)
+  groups[i] <- paste("G0", groups[i], sep="") #add G0 in front
+  }
+}
+
+orca_data_sub2_6 <- orca_data_sub2 %>% #filter for the 6 groups
+  filter(Group.ID == groups[1] | Group.ID == groups[2] | Group.ID == groups[3] |
+         Group.ID == groups[4] | Group.ID == groups[5] | Group.ID == groups[6])
+
+#Checking number of observations from each group
+orca_data_sub2 %>% 
+  group_by(Group.ID) %>% 
+  tally() %>% 
+  arrange(n, desc(n))
+
+#G002, G003 have 1 observation
+#G005, G0019, G022, G024, G027, G037, G046 have 2 observations
+```
+
+# Plotting
+
+## Initial Hypothesis
+
+```{r Exploratory Plotting}
+#Year on cohesion
+ggplot(data = orca_data_subset, aes(x = Year, y = HWI))+
+  geom_point()+
+  facet_wrap(~Group.ID)
+# Chinook abundance on cohesion
+ggplot(data = orca_data_subset, aes(x = CK.tr, y = HWI))+
+  geom_point()+
+  facet_wrap(~Group.ID)
+# Maternity (by pod) on cohesion
+ggplot(data = orca_data_subset, aes (x = Rg, y = HWI))+
+  geom_point()+
+  facet_wrap(~Group.ID)
+
+
+```
+
+## Secondary Hypothesis
+
+```{r Exploratory Graphing 2}
+#Salmon over time
+ggplot(orca_data_sub2, aes(Year, CK.oa))+
+  geom_point()+
+  geom_line()
+
+ggplot(orca_data_sub2, aes(Year, CK.tr))+
+  geom_point()+
+  geom_line()
+
+ggplot(orca_data_sub2, aes(Year, CM))+
+  geom_point()+
+  geom_line()
+
+#Lactating females over time in groups
+ggplot(orca_data_sub2, aes(Year, FLg))+
+  geom_point()+
+  facet_wrap(~Group.ID)
+
+ggplot(orca_data_sub2_6, aes(Year, FLg))+
+  geom_point()+
+  geom_line()+ #improves readability
+  facet_wrap(~Group.ID)
+
+#Median age in groups
+ggplot(orca_data_sub2, aes(Year, Ag))+
+  geom_point()+
+  facet_wrap(~Group.ID)
+
+ggplot(orca_data_sub2_6, aes(Year, Ag))+
+  geom_point()+
+  geom_line()+ #improves readability
+  facet_wrap(~Group.ID)
+
+#Number of individuals in groups
+ggplot(orca_data_sub2, aes(Year, Ng))+
+  geom_point()+
+  facet_wrap(~Group.ID)
+
+ggplot(orca_data_sub2_6, aes(Year, Ng))+
+  geom_point()+
+  geom_line()+
+  facet_wrap(~Group.ID)
+
+#pod energetic requirement
+ggplot(orca_data_sub2, aes(Year, DPERg))+
+  geom_point()+
+  facet_wrap(~Group.ID)
+
+ggplot(orca_data_sub2_6, aes(Year, DPERg))+
+  geom_point()+
+  geom_line()+
+  facet_wrap(~Group.ID)
+```
+
+
+# Analysis
+
+ANALYSIS PLAN
+
+I want to view the data so I'm going to make a linear mixed model.
+- Random Variables:
+  - Year
+  - CK.oa
+  - CK.tr
+  - CM
+   - Note turn Group.ID and Submatriarch into as.factor
+
+- Fixed variables: 
+  - HWI
+  - DPERg
+  - DPERs
+
+Not Effects?
+Group.ID
+Submatriarch.ID
+
+```{r}
+
+```
+
+
+Things we need to decide
+- pod or subunit
+- chinook salmon vs chum or both?
+- Rsm vs Rg
+
+
+
+
