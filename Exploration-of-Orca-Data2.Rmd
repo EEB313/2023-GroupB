@@ -210,6 +210,27 @@ summary (CK_FLg)
 
 plot(CK_FLg_Year_GroupID) # I dont know
 ```
+
+I am going to do some transformations to see if I can make the plot less uggo
+```{r}
+# log transforming FLG 
+orca_data_sub2$FLg <- log(orca_data_sub2$FLg)
+
+CK_FLg_Year_GroupID_logtransform<-lmer(FLg~CK.oa + (1|Year) + (1|Group.ID), data = orca_data_sub2, REML= FALSE)
+#looks better! 
+plot(CK_FLg_Year_GroupID_logtransform)
+
+#exponentially transforming FLG
+orca_data_sub2$FLg <- exp(orca_data_sub2$FLg)
+
+
+CK_FLg_Year_GroupID_exptransform<-lmer(FLg~CK.oa + (1|Year) + (1|Group.ID), data = orca_data_sub2, REML= FALSE)
+#this also looks somewhat better than the original but I think the log one is a better transformation 
+plot(CK_FLg_Year_GroupID_exptransform)
+```
+
+
+
 MISC>
 i think if salmon is a random variable it should be (1+ck.oa|Year) (because ck is dependent on y ear)
 
