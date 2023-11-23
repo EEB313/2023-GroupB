@@ -9,14 +9,14 @@ output: html_notebook
 library(here)
 library(tidyverse)
 library(dplyr)
+library(ggfortify)
+#library(DMwR)
 ```
 
 ```{r Data Loading}
 #Reading in the Data
 library(here)
 here()
-#orca_data <- read.csv(here("Project", "Raw Data", "stredulinsky2021.csv")) 
-# Maddy's read in
 orca_data<- read.csv(here("stredulinsky2021.csv")) #Kaylie's'/Clara Read in 
 
 ```
@@ -157,6 +157,37 @@ ggplot(orca_data_sub2_6, aes(Year, DPERg))+
   facet_wrap(~Group.ID)
 ```
 
+## Testing Normality
+
+```{r}
+ggplot(orca_data_sub2, aes(FLg))+
+  geom_histogram() #histogram of FLg to assess normality
+```
+## Unscaling
+
+```{r}
+# value = x-mean(x) / 2sd(x)
+# descale <- function(x, sd){
+#   vals <- c()
+#   for(i in 1:length(x)){
+#     #vals[i] <- (x[i]-mean(x))/(2*sd)
+#     vals[i] <- (x[i]+mean(x))*(2*sd)
+#   }
+#   return(vals)
+# }
+# 
+# 
+# unscaledFLg <- descale(orca_data_sub2$FLg, 0.73)
+# 
+# unscaledData <- orca_data_sub2 %>% 
+#   select(FLg) %>% 
+#   unscale()
+
+unscaledFLg <- unscale(2*orca_data_sub2$FLg)
+unscaledCK.oa <- unscale(2*orca_data_sub2$CK.oa)
+```
+
+
 ## Testing Assumptions (LMM)
 1. Random Effects are Normally Distributed
 2. Response (lactating Females) is normally distributed
@@ -198,7 +229,7 @@ Fixed Variables : FLg, FRg, Salmon Data
 library(lme4)
 library(lmerTest)
 CK_FLg_Year<-lmer(FLg~CK.oa+ (1|Year), data = orca_data_sub2, REML= FALSE)
-summary (CK_FLg)
+summary (CK_FLg_Year)
 ```
 __BIGNOTE___ (we dont actually know what salmon data units is so this means nothing rn :)
 
@@ -206,7 +237,7 @@ __BIGNOTE___ (we dont actually know what salmon data units is so this means noth
 #CK.Oa, FLG ; Random effects: year and Group ID
 ```{r}
 CK_FLg_Year_GroupID<-lmer(FLg~CK.oa + (1|Year) + (1|Group.ID), data = orca_data_sub2, REML= FALSE)
-summary (CK_FLg)
+summary(CK_FLg_Year_GroupID)
 
 plot(CK_FLg_Year_GroupID) # I dont know
 ```
@@ -234,6 +265,34 @@ plot(CK_FLg_Year_GroupID_exptransform)
 MISC>
 i think if salmon is a random variable it should be (1+ck.oa|Year) (because ck is dependent on y ear)
 
+
+# Power Analysis
+
+```{r}
+# ------------- From Lecture -------------
+# power_analysis_function <- function(sample_size){
+#   
+#   sims <- 1000
+#   pvalues <- c()
+#   for (i in 1:sims){
+#   data <- data_generator(sample_size)
+#   model <- glm(disease_status~scale(age), family = binomial, data = data)
+#   pvalues[i] <- summary(model)$coefficients[2,4]
+#   }
+#   
+#   power_estimate <- length(which(pvalues < 0.01))/length(pvalues)
+#   
+#   return(power_estimate)
+# }
+# 
+# sample_sizes <- seq(100,200,10); power_estimates <- c()
+# 
+# for (i in 1:length(sample_sizes)){
+#   power_estimates[i] <- power_analysis_function(sample_size = sample_sizes[i])
+# }
+# 
+# knitr::kable(cbind(n = sample_sizes, power = power_estimates))
+```
 
 
 
