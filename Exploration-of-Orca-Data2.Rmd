@@ -274,27 +274,46 @@ Data set above:
 Min value: 0.46 (million)
 Max Value: 6.17 (million)
 
+## Chum Generator
 ```{r}
 
 years_measured<-(c(seq(1980,2010,1)))
-years_measured 
-
 #Numbers are in values of Millions of Fish
 chum_generator <- function(){
-  for (year in years_measured){
-    chum_density <- sample(x = seq(0.46,6.17,0.02), replace = T) #choosing a random value betwen the range of 0.46 to 6.17, Replacing is True
-    yearly_chum <- data.frame(years_measured, chum_density) #making data frame for each year and with the random density
-    print(yearly_chum)
+  chum_density <- sample(x = seq(0.46,6.17,0.02), size = length(years_measured), replace = T) #choosing a random value between the range of 0.46 to 6.17, Replacing is True
+  yearly_chum <- data.frame(years_measured, chum_density) #making data frame for each year and with the random density
+    return(yearly_chum)
   }
-}
   
 chum_generator()
 
-#I think we coud add like dnorm too (if we wanted it to be normal)
-# also not sure why its not just giving me like 200 values for each year.... so gonna have to fix that rip.
-  
+#Okay for reference, sample needs the x (the range to pick from) and then the size (which is how many variables its gonna pick); so don't need a for loop
   
 ```
+
+## Chinook Generator
+Based on https://www.npafc.org/wp-content/uploads/Public-Documents/2009/1199Rev1WGSA.pdf
+pg 123
+From 1980- 2008 (in millions of fish)
+Min value: 0.13
+Max Value: 1.27
+
+```{r}
+
+#Numbers are in values of Millions of Fish
+chinook_generator <- function(){
+  chinook_density <- sample(x = seq(0.13,1.27,0.02), size = length(years_measured), replace = T) #choosing a random value between the range of 0.46 to 6.17, Replacing is True
+  yearly_chinook <- data.frame(years_measured, chinook_density) #making data frame for each year and with the random density
+    return(yearly_chinook)
+  }
+  
+chinook_generator()
+
+
+```
+
+
+
 
 
 
