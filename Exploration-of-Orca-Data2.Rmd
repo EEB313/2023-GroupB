@@ -368,14 +368,17 @@ pod_data_2
 ```
 
 ```{r}
-#pod_data_Yea <- data.frame(year, group, repro_female, lact_female)
 lactating_Orca_Data_Gen <- function(n){
-  for(i in 1:n){}
+  pod_data_Year <- data.frame()
+  group_number<-seq(1,16,1)
+  for(i in 1:n){
     pod <- function(){
-      n<- rpois(1, lambda = 300)
-      pod_size<-rmultinom(1, size = n, prob = rep(1,16)) 
-      #multinorm to make sure orcas add to 300, repeat 16 times
-      pod_size_by_group <- data.frame(group_number,pod_size ) #puttin gin dataframe
+      #poisson distribution to choose total population each year
+      n <- rpois(1, lambda = 300)
+      #multinomial distribution keeps orcas at total pop size, make 16 pods
+      pod_size <- rmultinom(1, size = n, prob = rep(1,16))
+      year <- i+1979
+      pod_size_by_group <- data.frame(year, group_number, pod_size)
       return(pod_size_by_group)
     }
 
@@ -385,37 +388,50 @@ lactating_Orca_Data_Gen <- function(n){
     for(i in 1:nrow(pod_data)){
       Lactating_females[i] <- rbinom(1,pod_data$number_repro_females[i], prob = 0.2)
     }
-
     pod_data_2<-pod_data %>% 
     mutate(Lactating_females = Lactating_females)
+    pod_data_Year <- rbind(pod_data_Year, pod_data_2)
+  }
+  return(pod_data_Year)
 }
+year_pod_data <- lactating_Orca_Data_Gen(31)
+
+# Did not work:
+# vals <- cbind(year_pod_data, salmon_data)
+
+# rep_salmon_data <- data.frame()
+# for(i in 1:nrow(salmon_data)){
+#   for(x in i:(16*i)){
+#     rep_salmon_data[x,] <- salmon_data[i,]
+#     print(x)
+#   }
+#   print(i)
+# }
+# 
+# rep_salmon_data[1,] <- salmon_data[1,]
+# rep_salmon_data[17:32,] <- salmon_data[2,]
 ```
-
-
-
 
 MISC>
 i think if salmon is a random variable it should be (1+ck.oa|Year) (because ck is dependent on y ear)
-
 
 # Power Analysis
 
 ```{r}
 # ------------- From Lecture -------------
-# power_analysis_function <- function(sample_size){
-#   
-#   sims <- 1000
-#   pvalues <- c()
-#   for (i in 1:sims){
-#   data <- data_generator(sample_size)
-#   model <- glm(disease_status~scale(age), family = binomial, data = data)
-#   pvalues[i] <- summary(model)$coefficients[2,4]
-#   }
-#   
-#   power_estimate <- length(which(pvalues < 0.01))/length(pvalues)
-#   
-#   return(power_estimate)
-# }
+power_analysis_function <- function(sample_size){
+  sims <- 1000
+  pvalues <- c()
+  for (i in 1:sims){
+  data <- data_generator(sample_size)
+  model <- glm(disease_status~scale(age), family = binomial, data = data)
+  pvalues[i] <- summary(model)$coefficients[2,4]
+  }
+
+  power_estimate <- length(which(pvalues < 0.01))/length(pvalues)
+
+  return(power_estimate)
+}
 # 
 # sample_sizes <- seq(100,200,10); power_estimates <- c()
 # 
