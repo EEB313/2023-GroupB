@@ -17,7 +17,7 @@ library(ggfortify)
 #Reading in the Data
 library(here)
 here()
-orca_data<- read.csv(here("stredulinsky2021.csv")) #Kaylie's'/Clara Read in 
+orca_data<- read.csv(here("stredulinsky2021.csv")) #Kaylie/Clara/Madeline Read in 
 
 ```
 
@@ -182,9 +182,9 @@ ggplot(orca_data_sub2, aes(FLg))+
 # unscaledData <- orca_data_sub2 %>% 
 #   select(FLg) %>% 
 #   unscale()
-
-unscaledFLg <- unscale(2*orca_data_sub2$FLg)
-unscaledCK.oa <- unscale(2*orca_data_sub2$CK.oa)
+# 
+# unscaledFLg <- unscale(2*orca_data_sub2$FLg)
+# unscaledCK.oa <- unscale(2*orca_data_sub2$CK.oa)
 ```
 
 
