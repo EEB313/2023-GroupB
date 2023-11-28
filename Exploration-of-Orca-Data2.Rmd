@@ -10,6 +10,7 @@ library(here)
 library(tidyverse)
 library(dplyr)
 library(ggfortify)
+library(stats)
 #library(DMwR)
 ```
 
@@ -309,12 +310,86 @@ chinook_generator <- function(){
   
 chinook_generator()
 
+```
 
+#Generator for Salmon in DF format
+```{r}
+salmon<- data.frame(chinook_generator(), chum_generator())
+
+salmon_data<-salmon %>% 
+  select(years_measured,chinook_density,chum_density) %>% 
+  mutate(total_salmon = chinook_density + chum_density) 
+```
+
+```{r}
+hist(salmon_data$total_salmon)
 ```
 
 
+#Pod Size Generator 
+Based on 
 
+```{r}
+group_number<-seq(1,16,1)
+pod <- function(){
+  n<- rpois(1, lambda = 300)
+  pod_size<-rmultinom(1, size = n, prob = rep(1,16)) 
+  #multinorm to make sure orcas add to 300, repeat 16 times
+  pod_size_by_group <- data.frame(group_number,pod_size ) #puttin gin dataframe
+    return(pod_size_by_group)
+  }
+ 
+pod()
 
+```
+
+## Amount of Reproductive females
+Based on (INSERt link)
+```{r}
+pod_data<- pod() %>% 
+  mutate(number_repro_females = round(pod_size * 0.22,0))
+#rounding upwards to get whole number
+
+```
+
+# Number of Lactating Females
+```{r}
+Lactating_females <- c()
+for(i in 1:nrow(pod_data)){
+  Lactating_females[i] <- rbinom(1,pod_data$number_repro_females[i], prob = 0.2)
+}
+Lactating_females
+
+ pod_data_2<-pod_data %>% 
+  mutate(Lactating_females = Lactating_females)
+
+pod_data_2
+
+```
+
+```{r}
+#pod_data_Yea <- data.frame(year, group, repro_female, lact_female)
+lactating_Orca_Data_Gen <- function(n){
+  for(i in 1:n){}
+    pod <- function(){
+      n<- rpois(1, lambda = 300)
+      pod_size<-rmultinom(1, size = n, prob = rep(1,16)) 
+      #multinorm to make sure orcas add to 300, repeat 16 times
+      pod_size_by_group <- data.frame(group_number,pod_size ) #puttin gin dataframe
+      return(pod_size_by_group)
+    }
+
+    pod_data<- pod() %>% 
+      mutate(number_repro_females = round(pod_size * 0.22,0))
+    Lactating_females <- c()
+    for(i in 1:nrow(pod_data)){
+      Lactating_females[i] <- rbinom(1,pod_data$number_repro_females[i], prob = 0.2)
+    }
+
+    pod_data_2<-pod_data %>% 
+    mutate(Lactating_females = Lactating_females)
+}
+```
 
 
 
@@ -349,6 +424,10 @@ i think if salmon is a random variable it should be (1+ck.oa|Year) (because ck i
 # }
 # 
 # knitr::kable(cbind(n = sample_sizes, power = power_estimates))
+
+
+
+ #pod_size <- sample(x = seq(3,38,1), size = 16, replace = T) #Choosing from 16 total pods
 ```
 
 
