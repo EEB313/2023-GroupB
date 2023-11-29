@@ -396,20 +396,26 @@ lactating_Orca_Data_Gen <- function(n){
 }
 year_pod_data <- lactating_Orca_Data_Gen(31)
 
-# Did not work:
-# vals <- cbind(year_pod_data, salmon_data)
+#fitting the generated salmon data to proper rows for orcas
+# rep_salmon_data <- data.frame(years_measured = c(), chinook_density = c(), chum_density = c(), total_salmon = c())
+rep_salmon_data <- data.frame(chinook_density = c(), chum_density = c(), total_salmon = c())
+x <- 1
+i <- 1
+while(x < nrow(year_pod_data)){
+  #rep_salmon_data[c(x:(x+16)),1] <- salmon_data[i,1]
+  rep_salmon_data[c(x:(x+16)),1] <- salmon_data[i,2]
+  rep_salmon_data[c(x:(x+16)),2] <- salmon_data[i,3]
+  rep_salmon_data[c(x:(x+16)),3] <- salmon_data[i,4]
+  x <- x+16
+  i <- i+1
+}
+rep_salmon_data <- rep_salmon_data[-c(497),]
 
-# rep_salmon_data <- data.frame()
-# for(i in 1:nrow(salmon_data)){
-#   for(x in i:(16*i)){
-#     rep_salmon_data[x,] <- salmon_data[i,]
-#     print(x)
-#   }
-#   print(i)
-# }
-# 
-# rep_salmon_data[1,] <- salmon_data[1,]
-# rep_salmon_data[17:32,] <- salmon_data[2,]
+#combining the dataframe
+gen_Data <- year_pod_data %>%
+  mutate(chinook_abundance = c(rep_salmon_data[,1])) %>%
+  mutate(chum_abundance = c(rep_salmon_data[,2])) %>%
+  mutate(total_salmon = c(rep_salmon_data[,3]))
 ```
 
 MISC>
@@ -419,19 +425,19 @@ i think if salmon is a random variable it should be (1+ck.oa|Year) (because ck i
 
 ```{r}
 # ------------- From Lecture -------------
-power_analysis_function <- function(sample_size){
-  sims <- 1000
-  pvalues <- c()
-  for (i in 1:sims){
-  data <- data_generator(sample_size)
-  model <- glm(disease_status~scale(age), family = binomial, data = data)
-  pvalues[i] <- summary(model)$coefficients[2,4]
-  }
-
-  power_estimate <- length(which(pvalues < 0.01))/length(pvalues)
-
-  return(power_estimate)
-}
+# power_analysis_function <- function(sample_size){
+#   sims <- 1000
+#   pvalues <- c()
+#   for (i in 1:sims){
+#   data <- data_generator(sample_size)
+#   model <- glm(disease_status~scale(age), family = binomial, data = data)
+#   pvalues[i] <- summary(model)$coefficients[2,4]
+#   }
+# 
+#   power_estimate <- length(which(pvalues < 0.01))/length(pvalues)
+# 
+#   return(power_estimate)
+# }
 # 
 # sample_sizes <- seq(100,200,10); power_estimates <- c()
 # 
