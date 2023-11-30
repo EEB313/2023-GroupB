@@ -9,7 +9,7 @@ output: html_notebook
 library(here)
 library(tidyverse)
 library(dplyr)
-library(ggfortify)
+library(lme4)
 library(stats)
 #library(DMwR)
 ```
@@ -314,7 +314,7 @@ chinook_generator()
 
 #Generator for Salmon in DF format
 ```{r}
-salmon<- data.frame(chinook_generator(), chum_generator())
+salmon <- data.frame(chinook_generator(), chum_generator())
 
 salmon_data<-salmon %>% 
   select(years_measured,chinook_density,chum_density) %>% 
@@ -358,20 +358,20 @@ Lactating_females <- c()
 for(i in 1:nrow(pod_data)){
   Lactating_females[i] <- rbinom(1,pod_data$number_repro_females[i], prob = 0.2)
 }
-Lactating_females
 
- pod_data_2<-pod_data %>% 
+# Lactating_females
+
+pod_data_2<-pod_data %>% 
   mutate(Lactating_females = Lactating_females)
 
-pod_data_2
-
+# pod_data_2
 ```
 
 ```{r}
-lactating_Orca_Data_Gen <- function(n){
+data_Gen <- function(n){
   pod_data_Year <- data.frame()
   group_number<-seq(1,16,1)
-  for(i in 1:n){
+  for(i in 1:n){ #generate pod sizes
     pod <- function(){
       #poisson distribution to choose total population each year
       n <- rpois(1, lambda = 300)
@@ -382,40 +382,77 @@ lactating_Orca_Data_Gen <- function(n){
       return(pod_size_by_group)
     }
 
-    pod_data<- pod() %>% 
+    pod_data<- pod() %>% #add lactating females
       mutate(number_repro_females = round(pod_size * 0.22,0))
     Lactating_females <- c()
     for(i in 1:nrow(pod_data)){
       Lactating_females[i] <- rbinom(1,pod_data$number_repro_females[i], prob = 0.2)
     }
     pod_data_2<-pod_data %>% 
-    mutate(Lactating_females = Lactating_females)
+    mutate(lactating_females = Lactating_females)
     pod_data_Year <- rbind(pod_data_Year, pod_data_2)
   }
-  return(pod_data_Year)
+  
+  #generate salmon data in a dataframe
+  salmon <- data.frame(chinook_generator(), chum_generator())
+
+  salmon_data<-salmon %>% 
+    select(years_measured,chinook_density,chum_density) %>% 
+    mutate(total_salmon = chinook_density + chum_density) 
+  
+  #fitting the salmon data to the orca data
+  rep_salmon_data <- data.frame(chinook_density = c(), 
+                                chum_density = c(), 
+                                total_salmon = c())
+  x <- 1
+  i <- 1
+  while(x < nrow(year_pod_data)){
+    #for each 16 rows of the empty data frame, add the corresponding year 
+    #from salmon data
+    rep_salmon_data[c(x:(x+16)),1] <- salmon_data[i,2]
+    rep_salmon_data[c(x:(x+16)),2] <- salmon_data[i,3]
+    rep_salmon_data[c(x:(x+16)),3] <- salmon_data[i,4]
+    x <- x+16 #increase rows in repeated salmon data
+    i <- i+1 #increase row in salmon data
+  }
+  rep_salmon_data <- rep_salmon_data[-c(497),]
+
+  #combining the dataframe
+  gen_Data <- year_pod_data %>%
+    mutate(chinook_abundance = c(rep_salmon_data[,1])) %>%
+    mutate(chum_abundance = c(rep_salmon_data[,2])) %>%
+    mutate(total_salmon = c(rep_salmon_data[,3]))
+  
+  return(gen_Data)
 }
-year_pod_data <- lactating_Orca_Data_Gen(31)
+#year_pod_data <- lactating_Orca_Data_Gen(31)
 
 #fitting the generated salmon data to proper rows for orcas
-# rep_salmon_data <- data.frame(years_measured = c(), chinook_density = c(), chum_density = c(), total_salmon = c())
-rep_salmon_data <- data.frame(chinook_density = c(), chum_density = c(), total_salmon = c())
-x <- 1
-i <- 1
-while(x < nrow(year_pod_data)){
-  #rep_salmon_data[c(x:(x+16)),1] <- salmon_data[i,1]
-  rep_salmon_data[c(x:(x+16)),1] <- salmon_data[i,2]
-  rep_salmon_data[c(x:(x+16)),2] <- salmon_data[i,3]
-  rep_salmon_data[c(x:(x+16)),3] <- salmon_data[i,4]
-  x <- x+16
-  i <- i+1
-}
-rep_salmon_data <- rep_salmon_data[-c(497),]
-
-#combining the dataframe
-gen_Data <- year_pod_data %>%
-  mutate(chinook_abundance = c(rep_salmon_data[,1])) %>%
-  mutate(chum_abundance = c(rep_salmon_data[,2])) %>%
-  mutate(total_salmon = c(rep_salmon_data[,3]))
+# rep_salmon_data <- data.frame(chinook_density = c(), chum_density = c(), total_salmon = c())
+# x <- 1
+# i <- 1
+# while(x < nrow(year_pod_data)){
+#   #rep_salmon_data[c(x:(x+16)),1] <- salmon_data[i,1]
+#   rep_salmon_data[c(x:(x+16)),1] <- salmon_data[i,2]
+#   rep_salmon_data[c(x:(x+16)),2] <- salmon_data[i,3]
+#   rep_salmon_data[c(x:(x+16)),3] <- salmon_data[i,4]
+#   x <- x+16
+#   i <- i+1
+# }
+# rep_salmon_data <- rep_salmon_data[-c(497),]
+# 
+# #combining the dataframe
+# gen_Data <- year_pod_data %>%
+#   mutate(chinook_abundance = c(rep_salmon_data[,1])) %>%
+#   mutate(chum_abundance = c(rep_salmon_data[,2])) %>%
+#   mutate(total_salmon = c(rep_salmon_data[,3]))
+# 
+# ggplot(gen_Data, aes(lactating_females)) +
+#   geom_histogram()
+# 
+# ggplot(gen_Data, aes(lactating_females)) +
+#   geom_histogram() +
+#   facet_wrap(group_number)
 ```
 
 MISC>
@@ -424,32 +461,29 @@ i think if salmon is a random variable it should be (1+ck.oa|Year) (because ck i
 # Power Analysis
 
 ```{r}
-# ------------- From Lecture -------------
-# power_analysis_function <- function(sample_size){
-#   sims <- 1000
-#   pvalues <- c()
-#   for (i in 1:sims){
-#   data <- data_generator(sample_size)
-#   model <- glm(disease_status~scale(age), family = binomial, data = data)
-#   pvalues[i] <- summary(model)$coefficients[2,4]
-#   }
-# 
-#   power_estimate <- length(which(pvalues < 0.01))/length(pvalues)
-# 
-#   return(power_estimate)
-# }
-# 
-# sample_sizes <- seq(100,200,10); power_estimates <- c()
-# 
-# for (i in 1:length(sample_sizes)){
-#   power_estimates[i] <- power_analysis_function(sample_size = sample_sizes[i])
-# }
-# 
-# knitr::kable(cbind(n = sample_sizes, power = power_estimates))
+beta <- 0.05 #significant to 0.05
+power_poisson <- function(beta){
+  sims <- 100 #simulation number
+  pVal <- c(); SalmonEffect <- c()
+  for(i in 1:sims){ #loop for the number of simulations
+    data <- data_Gen(31) #generate the orca data for 31 years (1980-2010)
+    #make a glm
+    model <- glmer(lactating_females~total_salmon+
+                   (1|group_number)+(1|year), 
+                 family = poisson, data)
+    #save the effect salmon has
+    SalmonEffect[i] <- summary(model)$coefficient[2,1]
+    pVal[i] <- summary(model)$coefficient[2,4] #save model significance
+  }
+  powEst <- length(which(pVal<beta))/length(pVal)
+  return(list(SalmonEffect, powEst))
+}
 
-
-
- #pod_size <- sample(x = seq(3,38,1), size = 16, replace = T) #Choosing from 16 total pods
+results <- power_poisson(beta)
+print(paste("Power Estimate: ", results[2]))
+minEffect <- min(as.data.frame(results[1]))
+maxEffect <- max(as.data.frame(results[1]))
+print(paste("Range of Salmon Effects: ", minEffect, "-", maxEffect))
 ```
 
 
