@@ -368,35 +368,15 @@ pod_data_2<-pod_data %>%
 ```
 
 ```{r}
-data_Gen <- function(n){
+#n <- 31
+data_Gen <- function(beta1, beta2){
   pod_data_Year <- data.frame()
-  group_number<-seq(1,16,1)
-  for(i in 1:n){ #generate pod sizes
-    pod <- function(){
-      #poisson distribution to choose total population each year
-      n <- rpois(1, lambda = 300)
-      #multinomial distribution keeps orcas at total pop size, make 16 pods
-      pod_size <- rmultinom(1, size = n, prob = rep(1,16))
-      year <- i+1979
-      pod_size_by_group <- data.frame(year, group_number, pod_size)
-      return(pod_size_by_group)
-    }
-
-    pod_data<- pod() %>% #add lactating females
-      mutate(number_repro_females = round(pod_size * 0.22,0))
-    Lactating_females <- c()
-    for(i in 1:nrow(pod_data)){
-      Lactating_females[i] <- rbinom(1,pod_data$number_repro_females[i], prob = 0.2)
-    }
-    pod_data_2<-pod_data %>% 
-    mutate(lactating_females = Lactating_females)
-    pod_data_Year <- rbind(pod_data_Year, pod_data_2)
-  }
   
+  #Salmon Data
   #generate salmon data in a dataframe
   salmon <- data.frame(chinook_generator(), chum_generator())
-
-  salmon_data<-salmon %>% 
+  
+  salmon_data<-salmon %>%  #format data frame, add total salmon
     select(years_measured,chinook_density,chum_density) %>% 
     mutate(total_salmon = chinook_density + chum_density) 
   
@@ -404,9 +384,10 @@ data_Gen <- function(n){
   rep_salmon_data <- data.frame(chinook_density = c(), 
                                 chum_density = c(), 
                                 total_salmon = c())
+  
   x <- 1
   i <- 1
-  while(x < nrow(year_pod_data)){
+  while(x < 496){
     #for each 16 rows of the empty data frame, add the corresponding year 
     #from salmon data
     rep_salmon_data[c(x:(x+16)),1] <- salmon_data[i,2]
@@ -416,9 +397,45 @@ data_Gen <- function(n){
     i <- i+1 #increase row in salmon data
   }
   rep_salmon_data <- rep_salmon_data[-c(497),]
+  
+  colnames(rep_salmon_data) <- c("chinook_abundace", "chum_abundance", "total_salmon")
+  
+  # Orca Data Generation
+  group_number<-seq(1,16,1)
+  n <- 31
+  
+  for(i in 1:n){ #generate pod sizes
+    pod <- function(){
+      #poisson distribution to choose total population each year
+      s <- rpois(1, lambda = 300)
+      #multinomial distribution keeps orcas at total pop size, make 16 pods
+      pod_size <- rmultinom(1, size = s, prob = rep(1,16))
+      year <- i+1979
+      pod_size_by_group <- data.frame(year, group_number, pod_size)
+      return(pod_size_by_group)
+    }
+
+    # make the number of lactating females
+    pod_data <- pod() #call pod function above to make pods
+    # %>% mutate(number_repro_females = round(pod_size * 0.22,0)) - *removed*
+    Lactating_females <- c()
+    for(i in 1:nrow(pod_data)){ #calculate lactating females
+      #beta - makes lactating females dependent on salmon + pod size
+      Lactating_females[i] <- rpois(1,
+                                lambda = beta1*(pod_data$pod_size[i])+ 
+                                         beta2*rep_salmon_data$total_salmon[i])
+      #so: determine lactating females from pod size + additional amount 
+      #w/ more salmon
+      #
+      # originally was: rbinom(1, pod_data$number_repro_females, prob = 0.2)
+    }
+    pod_data_2<-pod_data %>% 
+      mutate(lactating_females = Lactating_females)
+    pod_data_Year <- rbind(pod_data_Year, pod_data_2)
+  }
 
   #combining the dataframe
-  gen_Data <- year_pod_data %>%
+  gen_Data <- pod_data_Year %>%
     mutate(chinook_abundance = c(rep_salmon_data[,1])) %>%
     mutate(chum_abundance = c(rep_salmon_data[,2])) %>%
     mutate(total_salmon = c(rep_salmon_data[,3]))
@@ -460,30 +477,126 @@ i think if salmon is a random variable it should be (1+ck.oa|Year) (because ck i
 
 # Power Analysis
 
-```{r}
-beta <- 0.05 #significant to 0.05
+```{r, warning = F}
+# beta1 <- 0.22 # seq(0.2, 0.24, 0.01)
+# beta2 <- 0.1 # seq(-0.5, 0.5, 0.1)
+# beta <- c(beta1, beta2)
+
+params <- expand.grid(beta1 = seq(0.2,0.24,0.01), 
+                      beta2 = c(0.0000001,0.00001,0.0001,0.001,0.01,0.1))
+#beta2 = seq(0.01, 1, 0.01)) # - another option maybe?
+
+#beta needs to be a vector with two entries, 1st beta1, 2nd beta2
 power_poisson <- function(beta){
-  sims <- 100 #simulation number
-  pVal <- c(); SalmonEffect <- c()
+  
+  sims <- 1000 #simulation number
+  pValSalmon <- c()
+  pValPod <- c()
+  SalmonEffect <- c()
+  PodEffect <- c()
+  models <- NULL
+  predictions <- NULL
+  Intercept <- c()
+  
   for(i in 1:sims){ #loop for the number of simulations
-    data <- data_Gen(31) #generate the orca data for 31 years (1980-2010)
+    data <- data_Gen(beta[1], beta[2]) #generate the orca data for 31 years (1980-2010)
     #make a glm
-    model <- glmer(lactating_females~total_salmon+
+    model <- glmer(lactating_females~total_salmon+pod_size+
                    (1|group_number)+(1|year), 
                  family = poisson, data)
     #save the effect salmon has
+    models[[i]] <- model
+    #prediction[i] <- predict(model)
+    
+    predictions[[i]] <- cbind(lact_fem_predict=
+                                predict(models[[i]], 
+                                        newdata = data.frame(
+                                          total_salmon=gen_Data$total_salmon,
+                                          pod_size = gen_Data$pod_size,
+                                          year=gen_Data$year,
+                                          group_number=gen_Data$group_number)), 
+                              total_salmon = gen_Data$total_salmon,
+                              year = gen_Data$year,
+                              pod_size = gen_Data$pod_size,
+                              group_number = gen_Data$group_number,
+                              index = i)
+    
     SalmonEffect[i] <- summary(model)$coefficient[2,1]
-    pVal[i] <- summary(model)$coefficient[2,4] #save model significance
+    PodEffect[i] <- summary(model)$coefficient[3,1]
+    
+    Intercept[i] <- summary(model)$coefficient[1,1] #save intercept
+    
+    pValSalmon[i] <- summary(model)$coefficient[2,4]
+    pValPod[i] <- summary(model)$coefficient[3,4] #save model significance
   }
-  powEst <- length(which(pVal<beta))/length(pVal)
-  return(list(SalmonEffect, powEst))
+  
+  powEstSalmon <- length(which(pValSalmon<0.05))/length(pValSalmon)
+  powEstPod <- length(which(pValPod<0.05))/length(pValPod)
+  
+  return(list(SalmonEffect, PodEffect, Intercept,
+              powEstSalmon, powEstPod, do.call(rbind, predictions)))
 }
 
 results <- power_poisson(beta)
-print(paste("Power Estimate: ", results[2]))
-minEffect <- min(as.data.frame(results[1]))
-maxEffect <- max(as.data.frame(results[1]))
-print(paste("Range of Salmon Effects: ", minEffect, "-", maxEffect))
+print(paste("Salmon Power Estimate: ", results[4]))
+minSaEffect <- min(as.data.frame(results[1]))
+maxSaEffect <- max(as.data.frame(results[1]))
+print(paste("Range of Salmon Effects: ", minSaEffect, "-", maxSaEffect))
+print(paste("Pod Power Estimate: ", results[5]))
+minPodEffect <- min(as.data.frame(results[2]))
+maxPodEffect <- max(as.data.frame(results[2]))
+print(paste("Range of Pod Size Effects: ", minPodEffect, "-", maxPodEffect))
+
+cbind(SalmonEffect = results[[1]]) %>%
+  ggplot(aes(x = SalmonEffect))+
+  geom_histogram()
+
+PowersSalmon <- c()
+powEstPod <- c()
+
+for (i in 1:nrow(params)){
+  beta <- c(params[i,1], params[i,2])
+  result <- power_poisson(beta)
+  PowersSalmon[i] <- result[[4]]
+  powEstPod[i] <- result[[5]]
+}
+
+cbind(PowersSalmon, powEstPod, params)
+
+seq(min(as.data.frame(results[[6]])$total_salmon),
+    max(as.data.frame(results[[6]])$total_salmon), length = 1000) -> salmons
+
+seq(min(as.data.frame(results[[6]])$pod_size),
+    max(as.data.frame(results[[6]])$pod_size), length = 1000) -> pods
+
+salmon_lines <- NULL
+pod_lines <- NULL
+
+for (i in 1:length(results[[3]])){
+  lines1 <- as.data.frame(cbind(salmons = salmons)) %>%
+    mutate(lact_prediction = results[[3]][i]+
+             results[[1]][i]*salmons)
+  lines1 <- cbind(lines1, index_model = i)
+  salmon_lines <- rbind(salmon_lines, lines1)
+  # POD SIZE IS CONSTANT HERE
+  
+  lines2 <- as.data.frame(cbind(pods = pods)) %>%
+    mutate(lact_prediction = results[[3]][i]+
+             results[[2]][i]*pods)
+  lines2 <- cbind(lines2, index_model = i)
+  pod_lines <- rbind(pod_lines, lines2)
+  # SALMON CONSTANT
+}
+
+as.data.frame(salmon_lines) %>%
+  ggplot(aes(x = salmons, y = lact_prediction, group = index_model))+
+  geom_line(color = "gray")+
+  theme_bw()
+
+as.data.frame(pod_lines) %>% 
+  ggplot(aes(x = pods, y = lact_prediction, group = index_model))+
+  geom_line(color = "gray")+
+  theme_bw()
 ```
 
 
