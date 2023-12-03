@@ -499,7 +499,9 @@ power_poisson <- function(beta){
   Intercept <- c()
   
   for(i in 1:sims){ #loop for the number of simulations
+    #for(i in 1:nrow(beta)){
     data <- data_Gen(beta[1], beta[2]) #generate the orca data for 31 years (1980-2010)
+    #data <- data_Gen(params[i,1], params[i,2])
     #make a glm
     model <- glmer(lactating_females~total_salmon+pod_size+
                    (1|group_number)+(1|year), 
@@ -511,14 +513,14 @@ power_poisson <- function(beta){
     predictions[[i]] <- cbind(lact_fem_predict=
                                 predict(models[[i]], 
                                         newdata = data.frame(
-                                          total_salmon=gen_Data$total_salmon,
-                                          pod_size = gen_Data$pod_size,
-                                          year=gen_Data$year,
-                                          group_number=gen_Data$group_number)), 
-                              total_salmon = gen_Data$total_salmon,
-                              year = gen_Data$year,
-                              pod_size = gen_Data$pod_size,
-                              group_number = gen_Data$group_number,
+                                          total_salmon=data$total_salmon,
+                                          pod_size = data$pod_size,
+                                          year=data$year,
+                                          group_number=data$group_number)), 
+                              total_salmon = data$total_salmon,
+                              year = data$year,
+                              pod_size = data$pod_size,
+                              group_number = data$group_number,
                               index = i)
     
     SalmonEffect[i] <- summary(model)$coefficient[2,1]
@@ -528,6 +530,7 @@ power_poisson <- function(beta){
     
     pValSalmon[i] <- summary(model)$coefficient[2,4]
     pValPod[i] <- summary(model)$coefficient[3,4] #save model significance
+    #}
   }
   
   powEstSalmon <- length(which(pValSalmon<0.05))/length(pValSalmon)
@@ -537,29 +540,42 @@ power_poisson <- function(beta){
               powEstSalmon, powEstPod, do.call(rbind, predictions)))
 }
 
-results <- power_poisson(beta)
-print(paste("Salmon Power Estimate: ", results[4]))
-minSaEffect <- min(as.data.frame(results[1]))
-maxSaEffect <- max(as.data.frame(results[1]))
-print(paste("Range of Salmon Effects: ", minSaEffect, "-", maxSaEffect))
-print(paste("Pod Power Estimate: ", results[5]))
-minPodEffect <- min(as.data.frame(results[2]))
-maxPodEffect <- max(as.data.frame(results[2]))
-print(paste("Range of Pod Size Effects: ", minPodEffect, "-", maxPodEffect))
-
-cbind(SalmonEffect = results[[1]]) %>%
-  ggplot(aes(x = SalmonEffect))+
-  geom_histogram()
-
+#results <- power_poisson(beta)
+#results <- power_poisson(params)
 PowersSalmon <- c()
 powEstPod <- c()
+overall_Results <- NULL
 
 for (i in 1:nrow(params)){
   beta <- c(params[i,1], params[i,2])
   result <- power_poisson(beta)
+  overall_Results[i] <- result
   PowersSalmon[i] <- result[[4]]
   powEstPod[i] <- result[[5]]
 }
+
+print(paste("Salmon Power Estimate: ", overall_Results[4]))
+minSaEffect <- min(as.data.frame(overall_Results[1]))
+maxSaEffect <- max(as.data.frame(overall_Results[1]))
+print(paste("Range of Salmon Effects: ", minSaEffect, "-", maxSaEffect))
+print(paste("Pod Power Estimate: ", overall_Results[5]))
+minPodEffect <- min(as.data.frame(overall_Results[2]))
+maxPodEffect <- max(as.data.frame(overall_Results[2]))
+print(paste("Range of Pod Size Effects: ", minPodEffect, "-", maxPodEffect))
+
+# cbind(SalmonEffect = results[[1]]) %>%
+#   ggplot(aes(x = SalmonEffect))+
+#   geom_histogram()
+
+# PowersSalmon <- c()
+# powEstPod <- c()
+# 
+# for (i in 1:nrow(params)){
+#   beta <- c(params[i,1], params[i,2])
+#   result <- power_poisson(beta)
+#   PowersSalmon[i] <- result[[4]]
+#   powEstPod[i] <- result[[5]]
+# }
 
 cbind(PowersSalmon, powEstPod, params)
 
