@@ -502,7 +502,7 @@ power_poisson <- function(beta){
     #for(i in 1:nrow(beta)){
     data <- data_Gen(beta[1], beta[2]) #generate the orca data for 31 years (1980-2010)
     #data <- data_Gen(params[i,1], params[i,2])
-    #make a glm
+    #make a glm with lactating females as (y), and fixed effects total_salmon and pod_size as (x). Random effects arr year and group_number
     model <- glmer(lactating_females~total_salmon+pod_size+
                    (1|group_number)+(1|year), 
                  family = poisson, data)
@@ -577,41 +577,53 @@ print(paste("Range of Pod Size Effects: ", minPodEffect, "-", maxPodEffect))
 #   powEstPod[i] <- result[[5]]
 # }
 
-cbind(PowersSalmon, powEstPod, params)
+cbind(PowersSalmon, powEstPod, params) # Creating Dataframe of Powers at various Beta levels. 
 
-seq(min(as.data.frame(results[[6]])$total_salmon),
-    max(as.data.frame(results[[6]])$total_salmon), length = 1000) -> salmons
+seq(min(as.data.frame(result[[6]])$total_salmon),
+    max(as.data.frame(result[[6]])$total_salmon), length = 1000) -> salmons
 
-seq(min(as.data.frame(results[[6]])$pod_size),
-    max(as.data.frame(results[[6]])$pod_size), length = 1000) -> pods
+seq(min(as.data.frame(result[[6]])$pod_size),
+    max(as.data.frame(result[[6]])$pod_size), length = 1000) -> pods
 
 salmon_lines <- NULL
 pod_lines <- NULL
 
-for (i in 1:length(results[[3]])){
+for (i in 1:length(result[[3]])){
   lines1 <- as.data.frame(cbind(salmons = salmons)) %>%
-    mutate(lact_prediction = results[[3]][i]+
-             results[[1]][i]*salmons)
+    mutate(lact_prediction = result[[3]][i]+
+             result[[1]][i]*salmons)
   lines1 <- cbind(lines1, index_model = i)
   salmon_lines <- rbind(salmon_lines, lines1)
   # POD SIZE IS CONSTANT HERE
   
   lines2 <- as.data.frame(cbind(pods = pods)) %>%
-    mutate(lact_prediction = results[[3]][i]+
-             results[[2]][i]*pods)
+    mutate(lact_prediction = result[[3]][i]+
+             result[[2]][i]*pods)
   lines2 <- cbind(lines2, index_model = i)
   pod_lines <- rbind(pod_lines, lines2)
   # SALMON CONSTANT
 }
 
+
+
+
 as.data.frame(salmon_lines) %>%
   ggplot(aes(x = salmons, y = lact_prediction, group = index_model))+
   geom_line(color = "gray")+
+  geom_line(aes(x = mean(salmons), y = mean(lact_prediction)), colour = "blue")+
+  labs(x = "Salmon Abundance (millions of fish)", y ="Predicted Number of Lactating Females per Pod" , title = "Effect of Salmon Abundance on Lactating Females")+
   theme_bw()
+
+
+#Making Average line - I need an average intercept
+mean(pod_lines$pods) #22
+mean(pod_lines$lact_prediction) #1.717725
+#Okay so y = mx+b
 
 as.data.frame(pod_lines) %>% 
   ggplot(aes(x = pods, y = lact_prediction, group = index_model))+
   geom_line(color = "gray")+
+  labs(x = "Size of Pod", y = "Predicted Number of Lactating Females", title = "Pod Size on Number of Lactating Females")+
   theme_bw()
 ```
 
