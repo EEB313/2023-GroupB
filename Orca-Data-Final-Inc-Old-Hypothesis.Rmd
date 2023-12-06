@@ -52,7 +52,6 @@ orca_data_sub2 <- orca_data %>% #select relevant columns
 ```
 
 ```{r Pod Subsets}
-#selecting 6 random groups to look at because 56 is hard to see at once
 # Here I'm selecting six random groups to look at in the graphs since
 # when we facet wrap by all groups, the graphs end up small. This way
 # we just graph six to see some of the data more clearly
@@ -210,7 +209,7 @@ Fixed Variables : FLg, Salmon Data
 ## LMM with Randomized Slope
 
 - we have random effects
-- data is dependen on one another
+- data is dependent on one another
 - our data is not normal
 - we expect the number of salmon to increase 'randomly' with number of lactating females
 
@@ -320,7 +319,7 @@ chinook_generator()
 ```
 
 ### Generator for Salmon in DF format
-
+We needed to change the format so we could combine our data into one data frame and graph it as a histogram.
 ```{r Salmon Generation Dataframe}
 salmon <- data.frame(chinook_generator(), chum_generator())
 
@@ -467,7 +466,7 @@ data_Gen <- function(beta1, beta2){
 
 # Power Analysis
 
-**WARNING** The below code takes over an hour to run. Change simulations to 100 for it to run in a few minutes if you don't have the time to wait.
+**WARNING** The below code takes over an hour (roughly 3-4hrs) to run. Change simulations to 100 for it to run in a few minutes if you don't have the time to wait.
 
 ```{r Power Analysis, warning = F}
 params <- expand.grid(beta1 = seq(0.2,0.24,0.01), 
@@ -476,7 +475,7 @@ params <- expand.grid(beta1 = seq(0.2,0.24,0.01),
 #beta needs to be a vector with two entries, 1st: beta1, 2nd: beta2
 power_poisson <- function(beta){
   
-  sims <- 1000 #simulation number
+  sims <- 1000 #simulation number 
   #create vectors/variables to hold values
   pValSalmon <- c()
   pValPod <- c()
@@ -563,7 +562,7 @@ salmon_lines <- NULL
 pod_lines <- NULL
 
 # create lines where one fixed effect is constant using the slopes and
-# intercepts from the models
+# intercepts from all of the models
 for (i in 1:length(result[[3]])){
   lines1 <- as.data.frame(cbind(salmons = salmons)) %>%
     mutate(lact_prediction = result[[3]][i]+
