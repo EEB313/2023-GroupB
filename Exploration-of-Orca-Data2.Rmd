@@ -627,6 +627,34 @@ as.data.frame(pod_lines) %>%
   theme_bw()
 ```
 
+```{r}
+library(tidyverse)
+
+
+orcapop<-read.csv("C:/Users/Owner/Desktop/fall 23'/EEB 313/NRKW Population 1.csv")
+
+library(ggplot2)
+ 
+ggplot(data = orcapop, aes(x = Females_fecund_available)) +
+  geom_histogram()
+
+ggplot (data = orcapop, aes(x = Pregnancy_count)) +
+  geom_histogram()
+
+#measure of lactating 
+
+ggplot(data = orcapop, aes(x = Females_fecund_unavailable)) +
+  geom_histogram()
+
+ggplot(data = orcapop, aes(x = Birth_count)) +
+  geom_histogram()
+
+
+```
+#GLMM / LMM
+
+
+
 
 
 
