@@ -321,6 +321,7 @@ salmon_data<-salmon %>%
   mutate(total_salmon = chinook_density + chum_density) 
 ```
 
+
 ```{r}
 hist(salmon_data$total_salmon)
 ```
@@ -627,6 +628,8 @@ as.data.frame(pod_lines) %>%
   theme_bw()
 ```
 
+# Orca Census Data
+
 ```{r}
 library(tidyverse)
 library(here)
@@ -652,9 +655,9 @@ ggplot(data = orcapop, aes(x = Birth_count)) +
 
 
 ```
-#GLMM / LMM
+## Orca Data Wrangling
 
-```{r}
+```{r Wrangling Pod Data}
 # (val - mean) / 2*SD
 # mean_Size <- mean(orcaCensus$Size_best)
 # sd_Size <- sd(orcaCensus$Size_best)
@@ -671,31 +674,227 @@ ggplot(data = orcapop, aes(x = Birth_count)) +
 # }
 #untransformed_Group_Num <- (orca_data$Ng/sD_Size)+mean_Size
 # THIS GIRL SHOUD NEVER WRITE A PAPER AGAIN
+ 
+# pods_mod_Data_Year <- data.frame()
+# for(i in 1:31){
+#   year <- i+1979
+#   pods_mod_Data_Year[i,1] <- year
+#   pods_mod_Data_Year[i,2] <- orca_data %>% tally(Year == year)
+#   pods_mod_Data_Year[i,3] <- (orcaCensus$Size_best[orcaCensus$YEAR==(year)]
+#                               /pods_mod_Data_Year[i,2])
+# }
+# colnames(pods_mod_Data_Year) <- c("Year", "Measured_Pod_Count", 
+#                                   "Avg_Orcas_Per_Pod")
 
-pods_Year <- data.frame()
+pods_Census_Data <- data.frame()
+pods_List <- c(20,18,18,20,21,17,16,21,21,20,21,20,24,26,25,25,
+               25,25,24,25,25,25,24,21,22,23,23,25,25,23,24)
 for(i in 1:31){
   year <- i+1979
-  pods_Year[i,1] <- year
-  pods_Year[i,2] <- orca_data %>% tally(Year == year)
-  pods_Year[i,3] <- (orcaCensus$Size_best[orcaCensus$YEAR==(year)]/pods_Year[i,2])
+  pods_Census_Data[i,1] <- year
+  pods_Census_Data[i,2] <- pods_List[i]
+  pods_Census_Data[i,3] <- (orcaCensus$Size_best[orcaCensus$YEAR==(year)]
+                            /pods_List[i])
+  pods_Census_Data[i,4] <- 
+    (orcaCensus$Females_fecund_unavailable[orcaCensus$YEAR==(year)]
+                            /pods_List[i])
 }
-colnames(pods_Year) <- c("Year", "Pod_Count", "Avg_Orcas_Per_Pod")
+colnames(pods_Census_Data) <- c("Year", "Pod_Count", 
+                                "Avg_Orcas_Per_Pod", "Avg_Fecund_Unav_Per_Pod")
 
+pods_Data <- data.frame() # create a data frame to hold the estimated pod data
+x <- 1
+i <- 1
+while(x < 692){
+  year <- i+1979
+  pods_Data[c(x:((x-1)+pods_List[i])),1] <- year # add the year for each row
+  pods_Data[c(x:((x-1)+pods_List[i])),2] <- c(1:pods_List[i]) #add a pod number
+  x <- x+pods_List[i]
+  i <- i+1
+}
+# Old pod size and lact female calculations
+# probabs <- c(0.025, 0.05, 0.075, 0.175, 0.35, 0.175, 0.075, 0.05, 0.025)
+# for(x in 1:nrow(pods_Census_Data)){
+#   year <- x+1979
+#   for(i in x:((x-1)+pods_List[x])){
+#     # use a poisson distribution to get a number of orcas in each pod based
+#     # on the average number of orcas in each pod that year
+#     pods_Data[i,3] <- rpois(1, pods_Census_Data[x,3])
+#     #multiNom_Pod_Size <- rmultinom(1, size = s_Total, prob = rep(1,pods_List[x]))
+#     #pods_Data[i,4] <- rmultinom(1, size = s_Total, prob = rep(1,pods_List[x]))
+#     pods_Data[i,4] <- rpois(1, pods_Census_Data[x,4])
+#     #pods_Data[i,6] <- rmultinom(1, size = s_Lact, prob = rep(1,pods_List[x]))
+#     # mean_Size <- round(pods_Census_Data[x,3])
+#     # pods_Data[i,3] <- sample(c((mean_Size-4):(mean_Size+4)), 1, replace = T, prob = probabs)
+#   }
+# }
+colnames(pods_Data) <- c("Year", "Pod_Num")
+
+pod_Multinom_Sizes <- data.frame()
+n <- 31
+for(i in 1:n){ #generate pod sizes
+  year <- i+1979
+  s_Total <- orcaCensus$Size_best[orcaCensus$YEAR==year]
+  s_Fecund_Unav <- orcaCensus$Females_fecund_unavailable[orcaCensus$YEAR==year]
+  s_Births <- orcaCensus$Birth_count[orcaCensus$YEAR==year]
+  s_Pregnancy <- orcaCensus$Pregnancy_count[orcaCensus$YEAR==year]
+  
+  size_Pod <- rmultinom(1, size = s_Total, 
+                        prob = rep(1,pods_List[i]))
+  size_Fecund_Unav_Pod <- rmultinom(1, size = s_Fecund_Unav, 
+                                    prob = rep(1,pods_List[i]))
+  size_Births_Pod <- rmultinom(1, size = s_Births, 
+                                    prob = rep(1,pods_List[i]))
+  size_Pregnancy_Pod <- rmultinom(1, size = s_Pregnancy, 
+                                    prob = rep(1,pods_List[i]))
+  
+  pod_size_by_group <- data.frame(year, size_Pod, size_Fecund_Unav_Pod, 
+                                  size_Births_Pod, size_Pregnancy_Pod)
+  
+  pod_Multinom_Sizes <- rbind(pod_Multinom_Sizes, pod_size_by_group)
+}
+
+pods_Data <- pods_Data %>% mutate(Pod_Size_Multinom = 
+                                    pod_Multinom_Sizes$size_Pod)
+pods_Data <- pods_Data %>% mutate(Fecund_Unav_Multinom = 
+                                    pod_Multinom_Sizes$size_Fecund_Unav_Pod)
+pods_Data <- pods_Data %>% mutate(Births_Multinom = 
+                                    pod_Multinom_Sizes$size_Births_Pod)
+pods_Data <- pods_Data %>% mutate(Pregnancy_Multinom = 
+                                    pod_Multinom_Sizes$size_Pregnancy_Pod)
 ```
 
-From Fig. 1c:
+```{r Adding Salmon to Pod Data}
+rep_salmon_data <- data.frame(chinook_density = c(), 
+                                chum_density = c(), 
+                                total_salmon = c())
+  
+x <- 1
+i <- 1
+while(x < 692){
+  #for each 16 rows of the empty data frame, add the corresponding year 
+  #from salmon data
+  rep_salmon_data[c(x:((x-1)+pods_List[i])),1] <- salmon_data[i,2]
+  rep_salmon_data[c(x:((x-1)+pods_List[i])),2] <- salmon_data[i,3]
+  rep_salmon_data[c(x:((x-1)+pods_List[i])),3] <- salmon_data[i,4]
+  x <- x+pods_List[i] #increase rows in repeated salmon data
+  i <- i+1 #increase row in salmon data
+}
+rep_salmon_data <- rep_salmon_data[-c(693),]
+colnames(rep_salmon_data) <- c("chinook_abundance", "chum_abundance", "total_salmon")
+
+
+pods_Salmon_Data <- pods_Data %>% 
+  mutate(Chinook_Abundance = rep_salmon_data$chinook_abundance)
+
+pods_Salmon_Data <- pods_Salmon_Data %>% 
+  mutate(Chum_Abundance = rep_salmon_data$chum_abundance)
+
+pods_Salmon_Data <- pods_Salmon_Data %>% 
+  mutate(Total_Salmon = rep_salmon_data$total_salmon)
+```
+
+## GLMM/LMM
+
+### Checking Assumptions
+```{r}
+hist(pods_Salmon_Data$Fecund_Unav_Multinom)
+hist(pods_Salmon_Data$Births_Multinom)
+hist(pods_Salmon_Data$Pregnancy_Multinom)
+hist(pods_Salmon_Data$Pod_Size_Multinom)
+hist(pods_Salmon_Data$Total_Salmon)
+# Fecundity unavialable, births, pregnancy is not normal, so GLMM
+```
+
+### Pod Model
+```{r}
+pod_Fecund_Unav_Model <- glmer(Fecund_Unav_Multinom~Total_Salmon+Pod_Size_Multinom+
+                   (1|Pod_Num)+(1|Year), 
+                 family = poisson, pods_Salmon_Data)
+summary(pod_Fecund_Unav_Model)
+
+pod_Births_Model <- glmer(Births_Multinom~Total_Salmon+Pod_Size_Multinom+
+                   (1|Pod_Num)+(1|Year), 
+                 family = poisson, pods_Salmon_Data)
+summary(pod_Births_Model)
+
+pod_Pregnancy_Model <- glmer(Pregnancy_Multinom~Total_Salmon+Pod_Size_Multinom+
+                   (1|Pod_Num)+(1|Year), 
+                 family = poisson, pods_Salmon_Data)
+summary(pod_Pregnancy_Model)
+```
+For females with fecundity unavailable as a lactating females proxy, no variables are significant
+For births as a lactating females proxy, salmon is significant
+For pregnancy as a lactating females proxy, no variables are significant
+
+*Note*: I'm not sure how to graph this lol i tried and failed
+
+### Total Population Model
+
+I'm gonna see if just looking at the population as a whole matters
+
+```{r}
+by_Year_Salmon <- orcaCensus %>% filter(YEAR >= 1980 & YEAR <= 2010)
+by_Year_Salmon <- by_Year_Salmon %>% select(YEAR, Size_best, 
+                                            Females_fecund_unavailable, 
+                                            Birth_count, Pregnancy_count)
+by_Year_Salmon <- by_Year_Salmon %>% mutate(chinook_abundance = 
+                                              salmon_data$chinook_density)
+by_Year_Salmon <- by_Year_Salmon %>% mutate(chum_abundance = 
+                                              salmon_data$chum_density)
+by_Year_Salmon <- by_Year_Salmon %>% mutate(total_salmon = 
+                                              salmon_data$total_salmon)
+
+pop_Fecund_Unav_Model <- glmer(Females_fecund_unavailable~total_salmon+
+                                 Size_best+(1|YEAR), 
+                 family = poisson, by_Year_Salmon)
+summary(pop_Fecund_Unav_Model)
+
+pop_Births_Model <- glmer(Birth_count~total_salmon+
+                            Size_best+(1|YEAR), 
+                 family = poisson, by_Year_Salmon)
+summary(pop_Births_Model)
+
+pop_Pregnancy_Model <- glmer(Pregnancy_count~total_salmon+
+                            Size_best+(1|YEAR), 
+                 family = poisson, by_Year_Salmon)
+summary(pop_Pregnancy_Model)
+```
+For females with fecundity unavailable as a lactating females proxy, population size significant
+For births as a lactating females proxy, population size is significant
+For pregnancies as a lactating females proxy, population size is significant
+
+
+Pod Counts Per Year:
+(From Fig. 1c)
 1980: 20 pods
 1981: 18 pods
 1982: 18 pods
 1983: 20 pods
 1984: 21 pods
 1985: 17 pods
-1986
+1986: 16 pods
+1987: 21 pods
+1988: 21 pods
+1989: 20 pods
 1990: 21 pods
+1991: 20 pods
+1992: 24 pods
+1993: 26 pods
+1994: 25 pods
 1995: 25 pods
-2000: 24 pods
+1996: 25 pods
+1997: 25 pods
+1998: 24 pods
+1999: 25 pods
+2000: 25 pods
+2001: 25 pods
+2002: 24 pods
+2003: 21 pods
+2004: 22 pods
 2005: 23 pods
+2006: 23 pods
+2007: 25 pods
+2008: 25 pods
+2009: 23 pods
 2010: 24 pods
-
-
-
