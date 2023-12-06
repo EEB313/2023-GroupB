@@ -629,9 +629,10 @@ as.data.frame(pod_lines) %>%
 
 ```{r}
 library(tidyverse)
+library(here)
 
-
-orcapop<-read.csv("C:/Users/Owner/Desktop/fall 23'/EEB 313/NRKW Population 1.csv")
+orcaCensus <- read.csv(here("NRKW Population 1.csv"))
+#orcapop<-read.csv("C:/Users/Owner/Desktop/fall 23'/EEB 313/NRKW Population 1.csv")
 
 library(ggplot2)
  
@@ -653,8 +654,48 @@ ggplot(data = orcapop, aes(x = Birth_count)) +
 ```
 #GLMM / LMM
 
+```{r}
+# (val - mean) / 2*SD
+# mean_Size <- mean(orcaCensus$Size_best)
+# sd_Size <- sd(orcaCensus$Size_best)
+# transformed_Total <- (orcaCensus$Size_best-mean_Size)/(2*sd_Size)
+# untransformed_Group_Num <- NULL
+# for(i in 1:564){
+#   untransformed_Group_Num[i] <- (orca_data$Ng[i]*(2*sd_Size))+mean_Size
+# }
+# mean_Fecund_Unav <- mean(orcaCensus$Females_fecund_unavailable)
+# sd_Fecund_Unav <- sd(orcaCensus$Females_fecund_unavailable)
+# untransformed_FLg <- NULL
+# for(i in 1:564){
+#   untransformed_FLg[i] <- (orca_data$FLg[i]*(2*sd_Fecund_Unav))+mean_Fecund_Unav
+# }
+#untransformed_Group_Num <- (orca_data$Ng/sD_Size)+mean_Size
+# THIS GIRL SHOUD NEVER WRITE A PAPER AGAIN
 
+pods_Year <- data.frame()
+for(i in 1:31){
+  year <- i+1979
+  pods_Year[i,1] <- year
+  pods_Year[i,2] <- orca_data %>% tally(Year == year)
+  pods_Year[i,3] <- (orcaCensus$Size_best[orcaCensus$YEAR==(year)]/pods_Year[i,2])
+}
+colnames(pods_Year) <- c("Year", "Pod_Count", "Avg_Orcas_Per_Pod")
 
+```
+
+From Fig. 1c:
+1980: 20 pods
+1981: 18 pods
+1982: 18 pods
+1983: 20 pods
+1984: 21 pods
+1985: 17 pods
+1986
+1990: 21 pods
+1995: 25 pods
+2000: 24 pods
+2005: 23 pods
+2010: 24 pods
 
 
 
