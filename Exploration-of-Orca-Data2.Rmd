@@ -898,3 +898,31 @@ Pod Counts Per Year:
 2008: 25 pods
 2009: 23 pods
 2010: 24 pods
+
+Models without salmon
+```{r}
+Fecund_Unav_Model <- glmer(Fecund_Unav_Multinom~Pod_Size_Multinom+
+                   (1|Pod_Num)+(1|Year), 
+                 family = poisson, pods_Salmon_Data)
+summary(Fecund_Unav_Model)
+#results = not significant - the pvalue= 0.4466 for impact of pod size on fecund unavail
+```
+
+```{r}
+
+Births_Model <- glmer(Births_Multinom~Pod_Size_Multinom+
+                   (1|Pod_Num)+(1|Year), 
+                 family = poisson, pods_Salmon_Data)
+summary(Births_Model)
+# not significant- pval= 0.555 for pod size on births 
+```
+
+```{r}
+
+Pregnancy_Model <- glmer(Pregnancy_Multinom~Pod_Size_Multinom+
+                   (1|Pod_Num)+(1|Year), 
+                 family = poisson, pods_Salmon_Data)
+summary(Pregnancy_Model)
+#not significant pval of 0.611 for pod size on pregnancy 
+```
+
