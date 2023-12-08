@@ -3,6 +3,8 @@ title: "Final Orca Data Generation and Power Analysis"
 output: html_notebook
 ---
 
+**WARNING** Before you run code for the entire document, there is a chunk that takes over an hour to run. Please change the value of `sims` if needed to reduce run time.
+
 # Set Up
 
 ```{r Packages}
