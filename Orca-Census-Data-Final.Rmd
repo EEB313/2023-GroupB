@@ -253,7 +253,7 @@ hist(pods_Salmon_Data$Pod_Size_Multinom)
 hist(pods_Salmon_Data$Total_Salmon)
 ```
 
-All proxy measures of lactating females (females with fecundity unavailabe, birth count, pregnancy count) are not normally distributed, so we will use GLMMs
+All proxy measures of lactating females (females with fecundity unavailabe, birth count, pregnancy count) as well as salmon are not normally distributed, so we will use GLMMs
 
 ## Pod Model
 ```{r}
