@@ -276,27 +276,6 @@ For females with fecundity unavailable as a lactating females proxy, no variable
 For births as a lactating females proxy, salmon is significant
 For pregnancy as a lactating females proxy, no variables are significant
 
-*Note*: I'm not sure how to graph this lol i tried and failed
-
-#Graphing Attempt #2
-
-```{r}
-# pods_Salmon_Data %>% 
-#  mutate(testing = predict(pod_Fecund_Unav_Model)) %>%  #using model to predict pod fecundity (#not sure if this is right I wonder if it should be predicting like random effects)
-#   ggplot(pods_Salmon_Data, aes(x = Total_Salmon, y = Fecund_Unav_Multinom, colour = Year)) +
-#   geom_abline(aes(intercept = ))
-# 
-# ggplot(rikz_data, aes(x=NAP, y=Richness, colour=Beach)) +
-#   
-#   # fixed effect regression line (read values off of model output above)
-#   geom_abline(aes(intercept=6.5844, slope=-2.5757), linewidth=2) +
-#   
-#   # fitted values (i.e., regression lines) for each beach
-#   geom_line(aes(y=fit_InterceptOnly), linewidth=1) +
-#   geom_point(size=3)
-```
-
-
 ## Total Population Model
 
 I'm gonna see if just looking at the population as a whole matters
