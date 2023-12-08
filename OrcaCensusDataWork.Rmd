@@ -11,16 +11,14 @@ library(lme4)
 
 ```{r}
 orcaCensus <- read.csv(here("NRKW Population 1.csv"))
-#orcapop<-read.csv("C:/Users/Owner/Desktop/fall 23'/EEB 313/NRKW Population 1.csv")
+#orcaCensus <- read.csv("C:/Users/Owner/Desktop/fall 23'/EEB 313/NRKW Population 1.csv")
 ```
 
 # Salmon Data Gen
 
-The orca census data does not include this so we have to generate this still
+The orca census data does not include this so we have to generate this data if we want to include it in our models.
 
-Okay so based on Salmon data collection from 
-https://www.npafc.org/wp-content/uploads/Public-Documents/2009/1199Rev1WGSA.pdf
-pg - 51 (BC Chum Salmon)
+Chum generator based on Salmon data collection from: https://www.npafc.org/wp-content/uploads/Public-Documents/2009/1199Rev1WGSA.pdf (pg 51 (BC Chum Salmon))
 
 For each year from 1980 to 2010 need to randomly select a salmon quantity.
 Hypothetically, the abundance would go down towards the 2000's but for this beginning function I'm just gonna have it choose randomly.
@@ -31,33 +29,38 @@ Max Value: 6.17 (million)
 
 ## Chum Generator
 ```{r}
+# Create the years for the model
 years_measured<-(c(seq(1980,2010,1)))
-#Numbers are in values of Millions of Fish
+# Numbers are in millions of fish
 chum_generator <- function(){
-  chum_density <- sample(x = seq(0.46,6.17,0.02), size = length(years_measured), replace = T) #choosing a random value between the range of 0.46 to 6.17, Replacing is True
-  yearly_chum <- data.frame(years_measured, chum_density) #making data frame for each year and with the random density
-    return(yearly_chum)
+  # Choosing a random value 0.46 - 6.17, replacement is true
+  chum_abundance <- sample(x = seq(0.46,6.17,0.02), 
+                           size = length(years_measured), 
+                           replace = T)
+  # Making data frame for each year, including the random abundance
+  yearly_chum <- data.frame(years_measured, chum_abundance)
+  return(yearly_chum)
   }
-  
-#chum_generator()
 ```
 
 ## Chinook Generator
-Based on https://www.npafc.org/wp-content/uploads/Public-Documents/2009/1199Rev1WGSA.pdf
-pg 123
+
+Based on https://www.npafc.org/wp-content/uploads/Public-Documents/2009/1199Rev1WGSA.pdf (pg 123)
 From 1980- 2008 (in millions of fish)
 Min value: 0.13
 Max Value: 1.27
 
 ```{r}
-#Numbers are in values of Millions of Fish
+# Numbers are in millions of fish
 chinook_generator <- function(){
-  chinook_density <- sample(x = seq(0.13,1.27,0.02), size = length(years_measured), replace = T) #choosing a random value between the range of 0.46 to 6.17, Replacing is True
-  yearly_chinook <- data.frame(years_measured, chinook_density) #making data frame for each year and with the random density
-    return(yearly_chinook)
+  # Choosing a random value between 0.13 and 1.27, replacement is true
+  chinook_abundance <- sample(x = seq(0.13,1.27,0.02), 
+                            size = length(years_measured), 
+                            replace = T)
+  # Making data frame for each year and with the random density
+  yearly_chinook <- data.frame(years_measured, chinook_abundance)
+  return(yearly_chinook)
   }
-  
-#chinook_generator()
 ```
 
 ## Generator for Salmon in DF format
@@ -65,76 +68,107 @@ chinook_generator <- function(){
 salmon <- data.frame(chinook_generator(), chum_generator())
 
 salmon_data<-salmon %>% 
-  select(years_measured,chinook_density,chum_density) %>% 
-  mutate(total_salmon = chinook_density + chum_density) 
+  select(years_measured,chinook_abundance,chum_abundance) %>% 
+  mutate(total_salmon = chinook_abundance + chum_abundance) 
 ```
 
 # Orca Census Data
 
 ## Exploratory Plotting
 ```{r}
-# library(ggplot2)
-#  
-# ggplot(data = orcapop, aes(x = Females_fecund_available)) +
-#   geom_histogram()
-# 
-# ggplot (data = orcapop, aes(x = Pregnancy_count)) +
-#   geom_histogram()
-# 
-# #measure of lactating 
-# 
-# ggplot(data = orcapop, aes(x = Females_fecund_unavailable)) +
-#   geom_histogram()
-# 
-# ggplot(data = orcapop, aes(x = Birth_count)) +
-#   geom_histogram()
-# 
+library(ggplot2)
 
+ggplot(data = orcaCensus, aes(x = Females_fecund_available)) +
+  geom_histogram()
+
+# potential proxy variables for lactating females
+
+ggplot(data = orcaCensus, aes(x = Females_fecund_unavailable)) +
+  geom_histogram()
+
+ggplot(data = orcaCensus, aes(x = Birth_count)) +
+  geom_histogram()
+
+ggplot (data = orcaCensus, aes(x = Pregnancy_count)) +
+  geom_histogram()
+
+# Looking at the variables over time
+
+ggplot(data = orcaCensus, aes(YEAR, Females_fecund_unavailable)) +
+  geom_point()+
+  geom_line()
+
+ggplot(data = orcaCensus, aes(YEAR, Birth_count)) +
+  geom_point()+
+  geom_line()
+
+ggplot(data = orcaCensus, aes(YEAR, Pregnancy_count)) +
+  geom_point()+
+  geom_line()
 ```
 
 ## Data Wrangling and Splitting for Pods
 
 ```{r Wrangling Pod Data}
-#pods_Census_Data <- data.frame()
+# A list of the number of pods each year, as determined by Fig 1c 
+# in Stredulinsky et.al 2021
 pods_List <- c(20,18,18,20,21,17,16,21,21,20,21,20,24,26,25,25,
                25,25,24,25,25,25,24,21,22,23,23,25,25,23,24)
-# for(i in 1:31){
-#   year <- i+1979
-#   pods_Census_Data[i,1] <- year
-#   pods_Census_Data[i,2] <- pods_List[i]
-#   pods_Census_Data[i,3] <- (orcaCensus$Size_best[orcaCensus$YEAR==(year)]
-#                             /pods_List[i])
-#   pods_Census_Data[i,4] <- 
-#     (orcaCensus$Females_fecund_unavailable[orcaCensus$YEAR==(year)]
-#                             /pods_List[i])
-# }
-# colnames(pods_Census_Data) <- c("Year", "Pod_Count", 
-#                                 "Avg_Orcas_Per_Pod", "Avg_Fecund_Unav_Per_Pod")
 
-pods_Data <- data.frame() # create a data frame to hold the estimated pod data
+# The purpose of the while loop below is to give each pod in a year it's own
+# row, so that we can then give each pod it's own pod size. For example,
+# for the year 1980 there will be 20 rows, with pods 1-20.
+
+# Create a data frame to hold the estimated pod data
+pods_Data <- data.frame()
+
+# Initialize both counters at one
 x <- 1
 i <- 1
-while(x < 692){
+
+# While x is less than the total number of pods in the study period
+while(x < sum(pods_List)){
+  # Set the year
   year <- i+1979
+  
+  # Take the rows from the end of the last year's pods to the end of this
+  # year's pods, where each pod is it's own row
   pods_Data[c(x:((x-1)+pods_List[i])),1] <- year # add the year for each row
-  pods_Data[c(x:((x-1)+pods_List[i])),2] <- c(1:pods_List[i]) #add a pod number
-  x <- x+pods_List[i]
-  i <- i+1
+  # Add a pod ID number for each pod present in the year
+  pods_Data[c(x:((x-1)+pods_List[i])),2] <- c(1:pods_List[i])
+  
+  x <- x+pods_List[i] # Increase the rows to the end of this year's pods
+  i <- i+1 # Increase the year by one
 }
 
-colnames(pods_Data) <- c("Year", "Pod_Num")
+colnames(pods_Data) <- c("Year", "Pod_Num") # create column names
 
+# initialize a data frame to hold individual pod sizes
 pod_Multinom_Sizes <- data.frame()
-n <- 31
+
+n <- 31 # Set the number of years in the study
+
+# The purpose of the for loop below is to generate a pod size, females with
+# fecundity unavailable count, births count, and pregnancy count for each pod.
+
 for(i in 1:n){ #generate pod sizes
+  # Set the exact year
   year <- i+1979
+  
+  # Take the total counts in a year from the orca census data where the year
+  # is equal to the current year in the loop
   s_Total <- orcaCensus$Size_best[orcaCensus$YEAR==year]
   s_Fecund_Unav <- orcaCensus$Females_fecund_unavailable[orcaCensus$YEAR==year]
   s_Births <- orcaCensus$Birth_count[orcaCensus$YEAR==year]
   s_Pregnancy <- orcaCensus$Pregnancy_count[orcaCensus$YEAR==year]
   
+  # Generate pod sizes as a multinomial with a size equal to the total number
+  # of orcas in that year, for the number of pods in that year where each
+  # pod size has an equal chance of occurring. 
   size_Pod <- rmultinom(1, size = s_Total, 
                         prob = rep(1,pods_List[i]))
+  # Perform the same process as above for births, pregancies, and females with
+  # fecundity unavailable.
   size_Fecund_Unav_Pod <- rmultinom(1, size = s_Fecund_Unav, 
                                     prob = rep(1,pods_List[i]))
   size_Births_Pod <- rmultinom(1, size = s_Births, 
@@ -142,12 +176,16 @@ for(i in 1:n){ #generate pod sizes
   size_Pregnancy_Pod <- rmultinom(1, size = s_Pregnancy, 
                                     prob = rep(1,pods_List[i]))
   
+  # Combine the data into a data frame
   pod_size_by_group <- data.frame(year, size_Pod, size_Fecund_Unav_Pod, 
                                   size_Births_Pod, size_Pregnancy_Pod)
   
+  # Bind each new year of data into one data frame
   pod_Multinom_Sizes <- rbind(pod_Multinom_Sizes, pod_size_by_group)
 }
 
+# Put the pod size, birth count, pregnancy count, and females with fecundity 
+# unavailable into the data frame with year and pod ID
 pods_Data <- pods_Data %>% mutate(Pod_Size_Multinom = 
                                     pod_Multinom_Sizes$size_Pod)
 pods_Data <- pods_Data %>% mutate(Fecund_Unav_Multinom = 
@@ -158,24 +196,41 @@ pods_Data <- pods_Data %>% mutate(Pregnancy_Multinom =
                                     pod_Multinom_Sizes$size_Pregnancy_Pod)
 ```
 
+The salmon data has to be formatted to fit the pod data, since there are now multiple rows per year. To do this, salmon abundances for a given year are repeated for the number of rows in that year.
+
 ```{r Adding Salmon to Pod Data}
-rep_salmon_data <- data.frame(chinook_density = c(), 
-                                chum_density = c(), 
+# Create a data frame to hold the repeated salmon data
+rep_salmon_data <- data.frame(chinook_abundance = c(), 
+                                chum_abundnace = c(), 
                                 total_salmon = c())
-  
+
+# Initialize both counters at one 
 x <- 1
 i <- 1
-while(x < 692){
+
+# The purpose of the while loop below is to give each row the salmon data for
+# the corresponding year of that row. For example, for the year 1980, the 
+# salmon data for 1980 will be added to each of the 20 rows
+
+while(x < sum(pods_List)){
+  # Take the rows from the end of the last year to the end of the current
+  # year in the loop, and add salmon data for the corresponding year
   rep_salmon_data[c(x:((x-1)+pods_List[i])),1] <- salmon_data[i,2]
   rep_salmon_data[c(x:((x-1)+pods_List[i])),2] <- salmon_data[i,3]
   rep_salmon_data[c(x:((x-1)+pods_List[i])),3] <- salmon_data[i,4]
-  x <- x+pods_List[i] #increase rows in repeated salmon data
-  i <- i+1 #increase row in salmon data
+  
+  x <- x+pods_List[i] # Increase rows in repeated salmon data
+  i <- i+1 # Increase row in salmon data
 }
+
+# Remove an extra row created in the loop
 rep_salmon_data <- rep_salmon_data[-c(693),]
+
+# Give the data frame correct column names
 colnames(rep_salmon_data) <- c("chinook_abundance", "chum_abundance", "total_salmon")
 
-
+# Create a data frame with the pod data and salmon data, 
+# and add each salmon column to it
 pods_Salmon_Data <- pods_Data %>% 
   mutate(Chinook_Abundance = rep_salmon_data$chinook_abundance)
 
@@ -190,13 +245,15 @@ pods_Salmon_Data <- pods_Salmon_Data %>%
 
 ## Checking Assumptions
 ```{r}
+# Create histograms for response and fixed effects to examine normality
 hist(pods_Salmon_Data$Fecund_Unav_Multinom)
 hist(pods_Salmon_Data$Births_Multinom)
 hist(pods_Salmon_Data$Pregnancy_Multinom)
 hist(pods_Salmon_Data$Pod_Size_Multinom)
 hist(pods_Salmon_Data$Total_Salmon)
-# Fecundity unavialable, births, pregnancy is not normal, so GLMM
 ```
+
+All proxy measures of lactating females (females with fecundity unavailabe, birth count, pregnancy count) are not normally distributed, so we will use GLMMs
 
 ## Pod Model
 ```{r}
@@ -219,28 +276,24 @@ For females with fecundity unavailable as a lactating females proxy, no variable
 For births as a lactating females proxy, salmon is significant
 For pregnancy as a lactating females proxy, no variables are significant
 
-
-
-
 *Note*: I'm not sure how to graph this lol i tried and failed
 
 #Graphing Attempt #2
 
 ```{r}
-
-pods_Salmon_Data %>% 
- mutate(testing = predict(pod_Fecund_Unav_Model)) %>%  #using model to predict pod fecundity (#not sure if this is right I wonder if it should be predicting like random effects)
-  ggplot(pods_Salmon_Data, aes( x = Total_Salmon, y = Fecund_Unav_Multinom, colour = Year)) +
-  geom_abline(aes(intercept = ))
-
-ggplot(rikz_data, aes(x=NAP, y=Richness, colour=Beach)) +
-  
-  # fixed effect regression line (read values off of model output above)
-  geom_abline(aes(intercept=6.5844, slope=-2.5757), linewidth=2) +
-  
-  # fitted values (i.e., regression lines) for each beach
-  geom_line(aes(y=fit_InterceptOnly), linewidth=1) +
-  geom_point(size=3)
+# pods_Salmon_Data %>% 
+#  mutate(testing = predict(pod_Fecund_Unav_Model)) %>%  #using model to predict pod fecundity (#not sure if this is right I wonder if it should be predicting like random effects)
+#   ggplot(pods_Salmon_Data, aes(x = Total_Salmon, y = Fecund_Unav_Multinom, colour = Year)) +
+#   geom_abline(aes(intercept = ))
+# 
+# ggplot(rikz_data, aes(x=NAP, y=Richness, colour=Beach)) +
+#   
+#   # fixed effect regression line (read values off of model output above)
+#   geom_abline(aes(intercept=6.5844, slope=-2.5757), linewidth=2) +
+#   
+#   # fitted values (i.e., regression lines) for each beach
+#   geom_line(aes(y=fit_InterceptOnly), linewidth=1) +
+#   geom_point(size=3)
 ```
 
 
@@ -249,6 +302,8 @@ ggplot(rikz_data, aes(x=NAP, y=Richness, colour=Beach)) +
 I'm gonna see if just looking at the population as a whole matters
 
 ```{r}
+# Create a new data frame with years within the study period, then select 
+# variables used in models, then add salmon data to the data frame.
 by_Year_Salmon <- orcaCensus %>% filter(YEAR >= 1980 & YEAR <= 2010)
 by_Year_Salmon <- by_Year_Salmon %>% select(YEAR, Size_best, 
                                             Females_fecund_unavailable, 
